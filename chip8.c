@@ -34,7 +34,7 @@ chip8* chip8_init() {
     }
 
     for (int i = 0; i<80; i++) {
-        vm->memory[i + 0x200] = chip8_fontset[i];
+        vm->memory[i] = chip8_fontset[i];
     }
 
     vm->running = 1;
@@ -69,6 +69,9 @@ void opcode(chip8* vm) {
                 Clear the display.*/
                 case 0x0000:
                     memset(vm->memory + 0x200, 0, sizeof(uint8_t));
+                    for (int i = 0; i<64; i++) {
+                        memset(vm->gfx[i], 0, sizeof(unsigned char));
+                    }
                     break;
 
                 /* 00EE - RET
@@ -112,9 +115,9 @@ void opcode(chip8* vm) {
         The interpreter compares register Vx to kk, and if they are equal, 
         increments the program counter by 2.*/    
         case 0x3000:
-            uint8_t x = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
-            if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else if (vm->V[x] == kk) {vm->PC += 2;}
+            uint8_t Vx = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
+            if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else if (vm->V[Vx] == kk) {vm->PC += 2;}
             break;
 
         /* 4xkk - SNE Vx, byte
@@ -123,9 +126,9 @@ void opcode(chip8* vm) {
         The interpreter compares register Vx to kk, and if they are not equal, 
         increments the program counter by 2.*/    
         case 0x4000:
-            x = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
-            if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else if (vm->V[x] != kk) {vm->PC += 2;}
+            Vx = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
+            if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else if (vm->V[Vx] != kk) {vm->PC += 2;}
             break;
 
         /* 5xy0 - SE Vx, Vy
@@ -134,10 +137,10 @@ void opcode(chip8* vm) {
         The interpreter compares register Vx to register Vy, and if they are equal, 
         increments the program counter by 2.*/    
         case 0x5000:
-            x = (vm->opcode & 0x0F00) >> 8;
-            uint8_t y = (vm->opcode & 0x00F0) >> 4;
-            if (x == 0x0F || y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else if (vm->V[x] == vm->V[y]) {vm->PC += 2;}
+            Vx = (vm->opcode & 0x0F00) >> 8;
+            uint8_t Vy = (vm->opcode & 0x00F0) >> 4;
+            if (Vx == 0x0F || Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else if (vm->V[Vx] == vm->V[Vy]) {vm->PC += 2;}
             break;
 
         /* 6xkk - LD Vx, byte
@@ -145,9 +148,9 @@ void opcode(chip8* vm) {
 
         The interpreter puts the value kk into register Vx.*/    
         case 0x6000:
-            x = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
-            if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else {vm->V[x] = kk;}
+            Vx = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
+            if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else {vm->V[Vx] = kk;}
             break;
 
         /* 7xkk - ADD Vx, byte
@@ -155,9 +158,9 @@ void opcode(chip8* vm) {
 
         Adds the value kk to the value of register Vx, then stores the result in Vx.*/
         case 0x7000:
-            x = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
-            if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else {vm->V[x] = (vm->V[x] + kk) & 0x00FF;}
+            Vx = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
+            if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else {vm->V[Vx] = (vm->V[Vx] + kk) & 0x00FF;}
             break;
 
         case 0x8000:
@@ -167,9 +170,9 @@ void opcode(chip8* vm) {
 
                 Stores the value of register Vy in register Vx.*/
                 case 0x0000:
-                    x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-                    if (x == 0x0E || y == 0x0E) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-                    else {vm->V[x] = vm->V[y];}
+                    Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+                    if (Vx == 0x0E || Vy == 0x0E) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    else {vm->V[Vx] = vm->V[Vy];}
                     break;
         
                 /* 8xy1 - OR Vx, Vy
@@ -179,9 +182,9 @@ void opcode(chip8* vm) {
                 A bitwise OR compares the corresponding bits from two values, and if either bit is 1, 
                 then the same bit in the result is also 1. Otherwise, it is 0.*/
                 case 0x0001:
-                    x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-                    if (x == 0x0F || y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-                    else {vm->V[x] = vm->V[x] | vm->V[y];}
+                    Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+                    if (Vx == 0x0F || Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    else {vm->V[Vx] = vm->V[Vx] | vm->V[Vy];}
                     break;
 
                 /* 8xy2 - AND Vx, Vy
@@ -191,9 +194,9 @@ void opcode(chip8* vm) {
                 A bitwise AND compares the corrseponding bits from two values, and if both bits are 1, 
                 then the same bit in the result is also 1. Otherwise, it is 0.*/
                 case 0x0002:
-                    x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-                    if (x == 0x0F || y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-                    else {vm->V[x] = vm->V[x] & vm->V[y];}
+                    Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+                    if (Vx == 0x0F || Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    else {vm->V[Vx] = vm->V[Vx] & vm->V[Vy];}
                     break;
                 
                 /* 8xy3 - XOR Vx, Vy
@@ -204,9 +207,9 @@ void opcode(chip8* vm) {
                 and if the bits are not both the same, then the corresponding bit in the result is set to 1. 
                 Otherwise, it is 0. */
                 case 0x0003:
-                    x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-                    if (x == 0x0F && y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-                    else {vm->V[x] = vm->V[x] ^ vm->V[y];}
+                    Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+                    if (Vx == 0x0F && Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    else {vm->V[Vx] = vm->V[Vx] ^ vm->V[Vy];}
                     break;
 
                 /* 8xy4 - ADD Vx, Vy
@@ -216,9 +219,9 @@ void opcode(chip8* vm) {
                 If the result is greater than 8 bits (i.e., > 255,) VF is set to 1, otherwise 0. 
                 Only the lowest 8 bits of the result are kept, and stored in Vx.*/
                 case 0x0004:
-                    x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-                    if (x == 0x0F && y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-                    else {vm->V[x] = vm->V[x] + vm->V[y];}
+                    Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+                    if (Vx == 0x0F && Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    else {vm->V[Vx] = vm->V[Vx] + vm->V[Vy];}
                     break;  
                 
                 /* 8xy5 - SUB Vx, Vy
@@ -227,11 +230,11 @@ void opcode(chip8* vm) {
                 If Vx > Vy, then VF is set to 1, otherwise 0. 
                 Then Vy is subtracted from Vx, and the results stored in Vx.*/
                 case 0x0005:
-                    x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-                    if (x == 0x0F && y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+                    if (Vx == 0x0F && Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
                     else {
-                        vm->V[0xF] = vm->V[x] > vm->V[y] ? 1: 0;
-                        vm->V[x] = vm->V[x] - vm->V[y];
+                        vm->V[0xF] = vm->V[Vx] > vm->V[Vy] ? 1: 0;
+                        vm->V[Vx] = vm->V[Vx] - vm->V[Vy];
                     }
                     break;
                 
@@ -241,11 +244,11 @@ void opcode(chip8* vm) {
                 If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. 
                 Then Vx is divided by 2.*/
                 case 0x0006:
-                    x = (vm->opcode & 0x0F00) >> 8;
-                    if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    Vx = (vm->opcode & 0x0F00) >> 8;
+                    if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
                     else {
-                        vm->V[0xF] = vm->V[x] & 0x01;
-                        vm->V[x] >>= 1;
+                        vm->V[0xF] = vm->V[Vx] & 0x01;
+                        vm->V[Vx] >>= 1;
                     }
                     break; 
 
@@ -255,11 +258,11 @@ void opcode(chip8* vm) {
                 If Vy > Vx, then VF is set to 1, otherwise 0. 
                 Then Vx is subtracted from Vy, and the results stored in Vx.*/
                 case 0x0007:
-                    x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-                    if (x == 0x0F && y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+                    if (Vx == 0x0F && Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
                     else {
-                        vm->V[0xF] = vm->V[y] > vm->V[x] ? 1: 0;
-                        vm->V[x] = vm->V[y] - vm->V[x];
+                        vm->V[0xF] = vm->V[Vy] > vm->V[Vx] ? 1: 0;
+                        vm->V[Vx] = vm->V[Vy] - vm->V[Vx];
                     }
                     break;
                 
@@ -269,11 +272,11 @@ void opcode(chip8* vm) {
                 If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. 
                 Then Vx is multiplied by 2.*/
                 case 0x000E:
-                    x = (vm->opcode & 0x0F00) >> 8;
-                    if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+                    Vx = (vm->opcode & 0x0F00) >> 8;
+                    if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
                     else {
-                        vm->V[0xF] = vm->V[x] & 0x10;
-                        vm->V[x] <<= 1;
+                        vm->V[0xF] = vm->V[Vx] & 0x10;
+                        vm->V[Vx] <<= 1;
                     }
                     break;
 
@@ -289,9 +292,9 @@ void opcode(chip8* vm) {
         The values of Vx and Vy are compared, and if they are not equal, 
         the program counter is increased by 2.*/
         case 0x9000:
-            x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-            if (x == 0x0F && y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else if (vm->V[x] != vm->V[y]) {vm->PC += 2;}
+            Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+            if (Vx == 0x0F && Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else if (vm->V[Vx] != vm->V[Vy]) {vm->PC += 2;}
             break;
 
         /* Annn - LD I, addr
@@ -317,9 +320,9 @@ void opcode(chip8* vm) {
         which is then ANDed with the value kk. The results are stored in Vx. 
         See instruction 8xy2 for more information on AND.*/    
         case 0xC000:
-            x = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
-            if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else {vm->V[x] = (uint8_t) rand() & kk;}
+            Vx = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
+            if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else {vm->V[Vx] = (uint8_t) rand() & kk;}
             break;
         
         /* Dxyn - DRW Vx, Vy, nibble
@@ -333,10 +336,43 @@ void opcode(chip8* vm) {
         See instruction 8xy3 for more information on XOR, and section 2.4, Display, 
         for more information on the Chip-8 screen and sprites.*/
         case 0xD000:
-            x = (vm->opcode & 0x0F00) >> 8, y = (vm->opcode & 0x00F0) >> 4;
-            uint8_t n = vm->opcode & 0x000F;
-            if (x == 0x0F && y == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+            if (Vx == 0x0F && Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else {
+                uint8_t n = vm->opcode & 0x000F; 
+                vm->V[0xF] = 0;
+                for (int i = 0; i < n; i++) {
+                    uint8_t sprite_byte = vm->memory[vm->I + i];
+
+                    for (int j = 0; j<8; j++) {
+                        if (sprite_byte & (0x80 >> j) != 0) {
+                            uint8_t x = vm->V[Vx + i] & 63, y = vm->V[Vy + j] & 31;
+
+                            if (vm->gfx[x][y]) {
+                                vm->V[0xF] = 1;
+                            }
+
+                            vm->gfx[x][y] ^= 1;
+                        }    
+                    }
+                }
+
+                vm->draw = 1;
+            }
             break;
+        
+        case 0xE000:
+            switch (vm->opcode & 0x00FF) {
+
+                /* Ex9E - SKP Vx
+                Skip next instruction if key with the value of Vx is pressed.
+
+                Checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, 
+                PC is increased by 2.*/
+                case 0x009E:
+                    unsigned char input = scanf("%c");
+                    break;
+            }
         
         default:
             fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);
