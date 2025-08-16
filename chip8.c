@@ -341,18 +341,18 @@ void opcode(chip8* vm) {
             else {
                 uint8_t n = vm->opcode & 0x000F; 
                 vm->V[0xF] = 0;
-                for (int i = 0; i < n; i++) {
+                for (int i = 0; i < n; i++) 
+                {
                     uint8_t sprite_byte = vm->memory[vm->I + i];
 
-                    for (int j = 0; j<8; j++) {
+                    for (int j = 0; j<8; j++) 
+                    {
                         if (sprite_byte & (0x80 >> j) != 0) {
                             uint8_t x = vm->V[Vx + i] & 63, y = vm->V[Vy + j] & 31;
 
-                            if (vm->gfx[x][y]) {
-                                vm->V[0xF] = 1;
-                            }
+                            if (vm->gfx[y][x]) {vm->V[0xF] = 1;}
 
-                            vm->gfx[x][y] ^= 1;
+                            vm->gfx[y][x] ^= 1;
                         }    
                     }
                 }
@@ -370,10 +370,113 @@ void opcode(chip8* vm) {
                 Checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, 
                 PC is increased by 2.*/
                 case 0x009E:
-                    unsigned char input = scanf("%c");
+                    Vx = vm->V[(vm->opcode & 0x0F00) >> 8];
+                    if (vm->key[Vx]) {vm->PC += 2;}
+                    break;
+                
+                /* ExA1 - SKNP Vx
+                Skip next instruction if key with the value of Vx is not pressed.
+
+                Checks the keyboard, and if the key corresponding to the value of Vx is currently in the up position, 
+                PC is increased by 2.*/
+                case 0x00A1:
+                    Vx = vm->V[(vm->opcode & 0x0F00) >> 8];
+                    if (!vm->key[Vx]) {vm->PC += 2;}
                     break;
             }
-        
+            break;
+
+        case 0xF000:
+            uint8_t x = vm->opcode & 0x0F;
+            if (x == 0xF) {
+                switch (vm->opcode & 0x00FF) {
+                    /* Fx07 - LD Vx, DT
+                    Set Vx = delay timer value.
+
+                    The value of DT is placed into Vx.*/
+                    case 0x0007:
+                        vm->V[x] = vm->DT;
+                        break;
+                    
+                    /* Fx0A - LD Vx, K
+                    Wait for a key press, store the value of the key in Vx.
+
+                    All execution stops until a key is pressed, then the value of that key is stored in Vx.*/
+                    case 0x000A:
+                        unsigned char key;
+                        while (!key) {
+                            scanf("%c");
+                        }
+                        vm->V[x] = key;
+                        break;
+
+                    /* Fx15 - LD DT, Vx
+                    Set delay timer = Vx.
+
+                    DT is set equal to the value of Vx.*/
+                    case 0x0015:
+                        vm->DT = vm->V[x];
+                        break;
+
+                    /* Fx18 - LD ST, Vx
+                    Set sound timer = Vx.
+
+                    ST is set equal to the value of Vx.*/
+                    case 0x0018:
+                        vm->ST = vm->V[x];
+                        break;
+                    
+                    /* Fx1E - ADD I, Vx
+                    Set I = I + Vx.
+
+                    The values of I and Vx are added, and the results are stored in I.*/
+                    case 0x001E:
+                        vm->I = vm->I + vm->V[x];
+                        break;
+                    
+                    /* Fx29 - LD F, Vx
+                    Set I = location of sprite for digit Vx.
+
+                    The value of I is set to the location for the hexadecimal sprite corresponding to the value of Vx. 
+                    See section 2.4 in the Chip-8 technical reference, Display, for more information on the Chip-8 hexadecimal font.*/
+                    case 0x0029:
+                        vm->I = vm->V[x] * 0x5;
+                        break;
+
+                    /* Fx33 - LD B, Vx
+                    Store BCD (binary coded decimal) representation of Vx in memory locations I, I+1, and I+2.
+
+                    The interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I, 
+                    the tens digit at location I+1, and the ones digit at location I+2.*/
+                    case 0x0033:
+                        vm->memory[vm->I] = vm->V[x] / 100;
+                        vm->memory[vm->I] = (vm->V[x] / 10) % 10;
+                        vm->memory[vm->I] = vm->V[x] % 100;
+                        break; 
+
+                    /* Fx55 - LD [I], Vx
+                    Store registers V0 through Vx in memory starting at location I.
+
+                    The interpreter copies the values of registers V0 through Vx into memory, starting at the address in I.*/
+                    case 0x0055:
+                        for (uint8_t i = 0; i < x+1; i++) {
+                            vm->memory[vm->I + i] = vm->V[i];
+                        }
+                        break;
+
+                    /* Fx65 - LD Vx, [I]
+                    Read registers V0 through Vx from memory starting at location I.
+
+                    The interpreter reads values from memory starting at location I into registers V0 through Vx.*/
+                    case 0x0065:
+                        for (uint8_t i = 0; i < x+1; i++) {
+                            vm->V[i] = vm->memory[vm->I + i];
+                        }
+                        break;
+                }
+            } 
+            break;
+
         default:
             fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);
             break;

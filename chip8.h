@@ -5,6 +5,9 @@
 #ifndef CHIP8_H
 #define CHIP8_H
 
+#define WIDTH 64
+#define HEIGHT 32
+
 typedef struct chip8 {
     uint8_t running;
 
@@ -32,8 +35,8 @@ typedef struct chip8 {
     //Sound timer
     uint8_t ST;
 
-    //monochrome display 64x32 resolution
-    unsigned char gfx[64][32];
+    //monochrome display with 64x32 resolution
+    unsigned char gfx[HEIGHT][WIDTH];
 
     //screen update register
     uint8_t draw;
