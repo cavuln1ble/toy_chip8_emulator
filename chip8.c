@@ -405,7 +405,7 @@ void opcode(chip8* vm) {
                     case 0x000A:
                         unsigned char key;
                         while (!key) {
-                            scanf("%c");
+                            key = scanf("%c", stdin);
                         }
                         vm->V[x] = key;
                         break;
@@ -450,8 +450,8 @@ void opcode(chip8* vm) {
                     the tens digit at location I+1, and the ones digit at location I+2.*/
                     case 0x0033:
                         vm->memory[vm->I] = vm->V[x] / 100;
-                        vm->memory[vm->I] = (vm->V[x] / 10) % 10;
-                        vm->memory[vm->I] = vm->V[x] % 100;
+                        vm->memory[vm->I + 1] = (vm->V[x] / 10) % 10;
+                        vm->memory[vm->I + 2] = vm->V[x] % 100;
                         break; 
 
                     /* Fx55 - LD [I], Vx
@@ -469,11 +469,12 @@ void opcode(chip8* vm) {
 
                     The interpreter reads values from memory starting at location I into registers V0 through Vx.*/
                     case 0x0065:
-                        for (uint8_t i = 0; i < x+1; i++) {
+                        for (uint8_t i = 0; i < x; i++) {
                             vm->V[i] = vm->memory[vm->I + i];
                         }
                         break;
                 }
+                break;
             } 
             break;
 
