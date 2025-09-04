@@ -58,7 +58,7 @@ void chip8_destroy(chip8* vm) {
 void opcode(chip8* vm) {
 
     vm->opcode = vm->memory[vm->PC] << 8 | vm->memory[vm->PC + 1];
-    vm->PC += 2;
+    int jumped = 0;
 
     switch (vm->opcode & 0xF000) {
 
@@ -95,6 +95,7 @@ void opcode(chip8* vm) {
 
         The interpreter sets the program counter to nnn.*/
         case 0x1000:
+            jumped = 1;
             vm->PC = vm->opcode & 0x0FFF;  
             break;
         
@@ -310,6 +311,7 @@ void opcode(chip8* vm) {
 
         The program counter is set to nnn plus the value of V0.*/
         case 0xB000:
+            jumped = 1;
             vm->PC = (vm->opcode & 0x0FFF) + vm->V[0];
             break;
         
@@ -482,4 +484,5 @@ void opcode(chip8* vm) {
             fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);
             break;
     }
+    if (!jumped) {vm->PC += 2;}
 }

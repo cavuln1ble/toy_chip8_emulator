@@ -8,8 +8,8 @@ int main() {
     rewind(f);
     chip8* ch8 = chip8_init();
     fread(&ch8->memory[ch8->PC], 1, fSize, f);
-    for (int i = 0; i<fSize; i++) {
-        printf("0x%X\n", ch8->memory[ch8->PC + i]);
+    while (ch8) {
+        opcode(ch8);
     }
     fclose(f);
     return 0;
