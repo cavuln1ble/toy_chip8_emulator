@@ -1,4 +1,4 @@
-#include "chip8.c"
+#include "chip8.h"
 #include ".\include\raylib.h"
 
 #define SCALE 10

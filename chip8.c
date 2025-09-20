@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,11 +64,10 @@ void opcode(chip8* vm) {
     switch (vm->opcode & 0xF000) {
 
         case 0x0000:
-            switch (vm->opcode & 0x000F) {
-
+            switch (vm->opcode & 0x00FF) {
                 /* 00E0 - CLS
                 Clear the display.*/
-                case 0x0000:
+                case 0x00E0:
                     memset(vm->memory + 0x200, 0, sizeof(uint8_t));
                     for (int i = 0; i<64; i++) {
                         memset(vm->gfx[i], 0, sizeof(unsigned char));
@@ -79,7 +79,7 @@ void opcode(chip8* vm) {
 
                 The interpreter sets the program counter to the address at the top of the stack, 
                 then subtracts 1 from the stack pointer.*/    
-                case 0x000E:
+                case 0x00EE:
                     vm->PC = vm->SP & 0x00FF;
                     vm->SP--;
                     break;
@@ -115,7 +115,7 @@ void opcode(chip8* vm) {
 
         The interpreter compares register Vx to kk, and if they are equal, 
         increments the program counter by 2.*/    
-        case 0x3000:
+        case 0x3000: 
             uint8_t Vx = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
             if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
             else if (vm->V[Vx] == kk) {vm->PC += 2;}
@@ -148,10 +148,10 @@ void opcode(chip8* vm) {
         Set Vx = kk.
 
         The interpreter puts the value kk into register Vx.*/    
-        case 0x6000:
-            Vx = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
-            if (Vx == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
-            else {vm->V[Vx] = kk;}
+        case 0x6000:{
+            uint8_t x = (vm->opcode & 0x0F00) >> 8, kk = vm->opcode & 0x00FF;
+            if (x == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
+            else {vm->V[x] = kk;}}
             break;
 
         /* 7xkk - ADD Vx, byte
@@ -337,20 +337,22 @@ void opcode(chip8* vm) {
         outside the coordinates of the display, it wraps around to the opposite side of the screen. 
         See instruction 8xy3 for more information on XOR, and section 2.4, Display, 
         for more information on the Chip-8 screen and sprites.*/
-        case 0xD000:
-            Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
+        case 0xD000:{
+            uint8_t Vx = (vm->opcode & 0x0F00) >> 8, Vy = (vm->opcode & 0x00F0) >> 4;
             if (Vx == 0x0F && Vy == 0x0F) {fprintf(stderr, "Invalid opcode: 0x%X\n", vm->opcode);}
             else {
                 uint8_t n = vm->opcode & 0x000F; 
                 vm->V[0xF] = 0;
-                for (int i = 0; i < n; i++) 
+                for (int sprite_row = 0; sprite_row < n; sprite_row++) 
                 {
-                    uint8_t sprite_byte = vm->memory[vm->I + i];
-
-                    for (int j = 0; j<8; j++) 
+                    uint8_t sprite_byte = vm->memory[vm->I + sprite_row];
+                    
+                    //0x80 = 1000 0000
+                    uint8_t const leftmost_bit = 0x80;
+                    for (int pixel = 0; pixel<8; pixel++) 
                     {
-                        if (sprite_byte & (0x80 >> j) != 0) {
-                            uint8_t x = vm->V[Vx + i] & 63, y = vm->V[Vy + j] & 31;
+                        if ((sprite_byte & (leftmost_bit >> pixel)) != 0) {
+                            uint8_t x = (vm->V[Vx] + pixel) & 63, y = (vm->V[Vy] + sprite_row) & 31;
 
                             if (vm->gfx[y][x]) {vm->V[0xF] = 1;}
 
@@ -360,7 +362,7 @@ void opcode(chip8* vm) {
                 }
 
                 vm->draw = 1;
-            }
+            }}
             break;
         
         case 0xE000:

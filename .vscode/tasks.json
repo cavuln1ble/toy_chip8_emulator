@@ -3,20 +3,10 @@
     "tasks": [
         {
             "label": "Compile C File",
-            "command": "gcc",
+            "command": "make",
             "type": "shell",
             "args": [
-                "-g",
-                "${file}",
-                "-o",
-                "${workspaceFolder}/main.o",
-                "-I",
-                "include",
-                "-L", 
-                "lib", 
-                "-lraylib", 
-                "-lgdi32", 
-                "-lwinmm"
+                "chip8",
             ],
             "problemMatcher": [
                 "$tsc"
